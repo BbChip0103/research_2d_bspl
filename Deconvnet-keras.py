@@ -13,19 +13,19 @@ import numpy as np
 import sys
 import time
 from PIL import Image
-from keras.layers import (
+from tensorflow.keras.layers import (
         Input,
         InputLayer,
         Flatten,
         Activation,
         Dense)
-from keras.layers.convolutional import (
-        Convolution2D,
+from tensorflow.keras.layers import (
+        Conv2D,
         MaxPooling2D)
-from keras.activations import *
-from keras.models import Model, Sequential
-from keras.applications import vgg16, imagenet_utils
-import keras.backend as K
+from tensorflow.keras.activations import *
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.applications import vgg16
+import tensorflow.keras.backend as K
 
 
 class DConvolution2D(object):
@@ -414,8 +414,8 @@ def visualize(model, data, layer_name, feature_to_visualize, visualize_mode):
     deconv_layers = []
     # Stack layers
     for i in range(len(model.layers)):
-        if isinstance(model.layers[i], Convolution2D):
-            deconv_layers.append(DConvolution2D(model.layers[i]))
+        if isinstance(model.layers[i], Conv2D):
+            deconv_layers.append(DConv2D(model.layers[i]))
             deconv_layers.append(
                     DActivation(model.layers[i]))
         elif isinstance(model.layers[i], MaxPooling2D):
@@ -496,19 +496,23 @@ def main():
     visualize_mode = args.mode
 
     model = vgg16.VGG16(weights = 'imagenet', include_top = True)
-    layer_dict = dict([(layer.name, layer) for layer in model.layers])
-    if not layer_dict.has_key(layer_name):
+#     print(model.summary())
+    layer_dict = {layer.name:layer for layer in model.layers}
+    if not layer_name in layer_dict:
         print('Wrong layer name')
         sys.exit()
+    print(model.layers[1].get_weights()[0].shape)
+    print(model.layers[2].get_weights()[0].shape)
 
     # Load data and preprocess
     img = Image.open(image_path)
+    
     img = img.resize((224, 224))
     img_array = np.array(img)
     img_array = np.transpose(img_array, (2, 0, 1))
     img_array = img_array[np.newaxis, :]
     img_array = img_array.astype(np.float)
-    img_array = imagenet_utils.preprocess_input(img_array)
+    img_array = vgg16.preprocess_input(img_array)
     
     deconv = visualize(model, img_array, 
             layer_name, feature_to_visualize, visualize_mode)
